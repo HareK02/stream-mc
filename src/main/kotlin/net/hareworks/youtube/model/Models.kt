@@ -37,7 +37,10 @@ data class Snippet(
     val publishedAt: String,
     val displayMessage: String? = null,
     val textMessageDetails: TextMessageDetails? = null,
-    val superChatDetails: SuperChatDetails? = null
+    val superChatDetails: SuperChatDetails? = null,
+    val superStickerDetails: SuperStickerDetails? = null,
+    val newSponsorDetails: NewSponsorDetails? = null,
+    val memberMilestoneChatDetails: MemberMilestoneChatDetails? = null
 )
 
 @Serializable
@@ -52,6 +55,34 @@ data class SuperChatDetails(
     val amountDisplayString: String,
     val userComment: String? = null,
     val tier: Int
+)
+
+@Serializable
+data class SuperStickerDetails(
+    val amountMicros: Long,
+    val currency: String,
+    val amountDisplayString: String,
+    val tier: Int,
+    val superStickerMetadata: SuperStickerMetadata? = null
+)
+
+@Serializable
+data class SuperStickerMetadata(
+    val stickerId: String? = null,
+    val altText: String? = null
+)
+
+@Serializable
+data class NewSponsorDetails(
+    val isUpgrade: Boolean? = null,
+    val memberLevelName: String? = null
+)
+
+@Serializable
+data class MemberMilestoneChatDetails(
+    val memberMonth: Int,
+    val memberLevelName: String? = null,
+    val userComment: String? = null
 )
 
 @Serializable

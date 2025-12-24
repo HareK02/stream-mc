@@ -3,6 +3,7 @@ package net.hareworks.screen
 import net.hareworks.StreamMCClient
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.components.Checkbox
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
@@ -11,6 +12,7 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
     private lateinit var apiKeyField: EditBox
     private lateinit var videoIdField: EditBox
     private lateinit var chatFormatField: EditBox
+    private lateinit var chatDisplayCheckbox: Checkbox
 
     override fun init() {
         super.init()
@@ -38,15 +40,22 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         chatFormatField.setHint(Component.literal("Format: %author% %message%"))
         addRenderableWidget(chatFormatField)
 
+        // Chat Display Checkbox
+        chatDisplayCheckbox = Checkbox.builder(Component.literal("Display chat in-game"), font)
+            .pos(centerX - 100, 160)
+            .selected(StreamMCClient.showChatInGame)
+            .build()
+        addRenderableWidget(chatDisplayCheckbox)
+
         // Start Button
         addRenderableWidget(Button.builder(Component.literal("Start Polling")) {
             startPolling()
-        }.bounds(centerX - 105, 170, 100, 20).build())
+        }.bounds(centerX - 105, 190, 100, 20).build())
 
         // Stop Button
         addRenderableWidget(Button.builder(Component.literal("Stop Polling")) {
             stopPolling()
-        }.bounds(centerX + 5, 170, 100, 20).build())
+        }.bounds(centerX + 5, 190, 100, 20).build())
     }
 
     private fun startPolling() {
@@ -61,6 +70,8 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         if (chatFormat.isNotBlank()) {
             StreamMCClient.chatFormat = chatFormat
         }
+        
+        StreamMCClient.showChatInGame = chatDisplayCheckbox.selected()
 
         StreamMCClient.startPolling(apiKey, videoId)
         
