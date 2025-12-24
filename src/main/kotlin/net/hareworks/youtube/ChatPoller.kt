@@ -5,15 +5,22 @@ import net.hareworks.youtube.model.LiveChatMessage
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class ChatPoller(private val apiKey: String, private val videoId: String) {
+
+data class MessageBatch(
+    val items: List<LiveChatMessage>,
+    val pollingInterval: Long,
+    val receivedAt: Long
+)
+
+class ChatPoller(private val apiKey: String, private val videoId: String, private val defaultPollingInterval: Long = 5000L) {
     private val client = YouTubeClient()
     private var job: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO)
     private val logger = LoggerFactory.getLogger("stream-mc-poller")
     private var isRunning = false
     
-    // Simple queue for now to expose messages
-    val messageQueue = ConcurrentLinkedQueue<LiveChatMessage>()
+    // Queue of batches to be processed by the client
+    val messageQueue = ConcurrentLinkedQueue<MessageBatch>()
 
     fun start() {
         if (isRunning) return
@@ -31,8 +38,9 @@ class ChatPoller(private val apiKey: String, private val videoId: String) {
 
             logger.info("Found liveChatId: $liveChatId")
             
+
             var nextPageToken: String? = null
-            var pollingInterval = 5000L // Default 5s
+            var pollingInterval = defaultPollingInterval
 
             while (isActive && isRunning) {
                 try {
@@ -46,7 +54,7 @@ class ChatPoller(private val apiKey: String, private val videoId: String) {
                         // Process messages
                          if (response.items.isNotEmpty()) {
                              logger.info("Fetched ${response.items.size} messages")
-                             messageQueue.addAll(response.items)
+                             messageQueue.add(MessageBatch(response.items, pollingInterval, System.currentTimeMillis()))
                          }
 
                     } else {

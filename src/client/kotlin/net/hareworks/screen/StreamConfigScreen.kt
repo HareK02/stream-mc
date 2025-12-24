@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component
 class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
     private lateinit var apiKeyField: EditBox
     private lateinit var videoIdField: EditBox
+    private lateinit var chatFormatField: EditBox
 
     override fun init() {
         super.init()
@@ -30,23 +31,35 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         videoIdField.setHint(Component.literal("Enter Video ID"))
         addRenderableWidget(videoIdField)
 
+        // Chat Format Field
+        chatFormatField = EditBox(font, centerX - 100, 130, 200, 20, Component.literal("Chat Format"))
+        chatFormatField.setMaxLength(200)
+        chatFormatField.value = StreamMCClient.chatFormat
+        chatFormatField.setHint(Component.literal("Format: %author% %message%"))
+        addRenderableWidget(chatFormatField)
+
         // Start Button
         addRenderableWidget(Button.builder(Component.literal("Start Polling")) {
             startPolling()
-        }.bounds(centerX - 105, 130, 100, 20).build())
+        }.bounds(centerX - 105, 170, 100, 20).build())
 
         // Stop Button
         addRenderableWidget(Button.builder(Component.literal("Stop Polling")) {
             stopPolling()
-        }.bounds(centerX + 5, 130, 100, 20).build())
+        }.bounds(centerX + 5, 170, 100, 20).build())
     }
 
     private fun startPolling() {
         val apiKey = apiKeyField.value
         val videoId = videoIdField.value
+        val chatFormat = chatFormatField.value
 
         if (apiKey.isBlank() || videoId.isBlank()) {
             return
+        }
+        
+        if (chatFormat.isNotBlank()) {
+            StreamMCClient.chatFormat = chatFormat
         }
 
         StreamMCClient.startPolling(apiKey, videoId)
@@ -68,5 +81,6 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         // Labels
         guiGraphics.drawString(font, Component.literal("API Key"), width / 2 - 100, 40, 0xA0A0A0)
         guiGraphics.drawString(font, Component.literal("Video ID"), width / 2 - 100, 80, 0xA0A0A0)
+        guiGraphics.drawString(font, Component.literal("Chat Format"), width / 2 - 100, 120, 0xA0A0A0)
     }
 }

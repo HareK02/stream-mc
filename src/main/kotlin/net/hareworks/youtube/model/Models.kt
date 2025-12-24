@@ -34,6 +34,7 @@ data class LiveChatMessage(
 @Serializable
 data class Snippet(
     val type: String,
+    val publishedAt: String,
     val displayMessage: String? = null,
     val textMessageDetails: TextMessageDetails? = null,
     val superChatDetails: SuperChatDetails? = null
