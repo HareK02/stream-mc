@@ -30,10 +30,39 @@ object StreamMCClient : ClientModInitializer {
     var apiKey: String? = null
     var videoId: String? = null
     var pollingIntervalMs: Long = 5000L
-    var chatFormat: String = "§e%author%: §f%message%"
     var showChatInGame: Boolean = true
+    var formats: Map<String, String> = mapOf(
+        "CHAT" to "§e%author%: §f%message%",
+        "SUPERCHAT" to "§c[SC] §6%author% §a(%displayAmount%): §f%message%",
+        "SUPERSTICKER" to "§d[Sticker] §6%author% §a(%displayAmount%)",
+        "NEW_SPONSOR" to "§a[New Member] §e%author% §b(%memberLevel%)",
+        "MEMBER_MILESTONE" to "§b[Milestone] §e%author% §d(%memberMonth% mo): §f%message%"
+    )
     
     val eventMap = mutableMapOf<EventType, String>()
+    
+    // ... (rest of the file) ...
+
+    private fun loadConfig() {
+        val config = ConfigManager.loadConfig()
+        videoId = config.videoId
+        pollingIntervalMs = config.pollingIntervalMs
+        showChatInGame = config.showChatInGame
+        formats = config.formats
+        eventMap.clear()
+        eventMap.putAll(ConfigManager.stringMapToEventMap(config.eventMappings))
+    }
+    
+    fun saveConfig() {
+        val config = StreamMCConfig(
+            videoId = videoId,
+            pollingIntervalMs = pollingIntervalMs,
+            showChatInGame = showChatInGame,
+            formats = formats,
+            eventMappings = ConfigManager.eventMapToStringMap(eventMap)
+        )
+        ConfigManager.saveConfig(config)
+    }
     
     private val displayQueue = PriorityQueue<QueuedMessage>()
 
@@ -200,38 +229,30 @@ object StreamMCClient : ClientModInitializer {
                 val rawAuthor = msg.authorDetails.displayName
                 val author = if (rawAuthor.startsWith("@")) rawAuthor.substring(1) else rawAuthor
                 
-                // Super Chat?
-                val superChat = msg.snippet.superChatDetails
-                val text = msg.snippet.displayMessage ?: msg.snippet.textMessageDetails?.messageText ?: ""
+                var eventType: EventType? = null
+                var params: Map<String, Any> = emptyMap()
                 
-                // Display in Chat
-                if (showChatInGame) {
-                    val formatted = chatFormat
-                        .replace("%author%", author)
-                        .replace("%message%", text)
-
-                    client.gui.chat.addMessage(Component.literal(formatted))
-                }
-                
-                // Trigger Event based on message type
+                // Identify Event Type and Params
                 when (msg.snippet.type) {
                     "superChatEvent" -> {
                         val superChat = msg.snippet.superChatDetails
                         if (superChat != null) {
-                            triggerEvent(EventType.SUPERCHAT, mapOf(
+                            eventType = EventType.SUPERCHAT
+                            params = mapOf(
                                 "author" to author,
                                 "message" to (superChat.userComment ?: ""),
                                 "amount" to superChat.amountMicros,
                                 "currency" to superChat.currency,
                                 "displayAmount" to superChat.amountDisplayString,
                                 "tier" to superChat.tier
-                            ))
+                            )
                         }
                     }
                     "superStickerEvent" -> {
                         val superSticker = msg.snippet.superStickerDetails
                         if (superSticker != null) {
-                            triggerEvent(EventType.SUPERSTICKER, mapOf(
+                            eventType = EventType.SUPERSTICKER
+                            params = mapOf(
                                 "author" to author,
                                 "amount" to superSticker.amountMicros,
                                 "currency" to superSticker.currency,
@@ -239,40 +260,64 @@ object StreamMCClient : ClientModInitializer {
                                 "tier" to superSticker.tier,
                                 "stickerId" to (superSticker.superStickerMetadata?.stickerId ?: ""),
                                 "altText" to (superSticker.superStickerMetadata?.altText ?: "")
-                            ))
+                            )
                         }
                     }
                     "newSponsorEvent" -> {
                         val newSponsor = msg.snippet.newSponsorDetails
                         if (newSponsor != null) {
-                            triggerEvent(EventType.NEW_SPONSOR, mapOf(
+                            eventType = EventType.NEW_SPONSOR
+                            params = mapOf(
                                 "author" to author,
                                 "isUpgrade" to (newSponsor.isUpgrade ?: false),
                                 "memberLevel" to (newSponsor.memberLevelName ?: "")
-                            ))
+                            )
                         }
                     }
                     "memberMilestoneChatEvent" -> {
                         val milestone = msg.snippet.memberMilestoneChatDetails
                         if (milestone != null) {
-                            triggerEvent(EventType.MEMBER_MILESTONE, mapOf(
+                            eventType = EventType.MEMBER_MILESTONE
+                            params = mapOf(
                                 "author" to author,
                                 "message" to (milestone.userComment ?: ""),
                                 "memberMonth" to milestone.memberMonth,
                                 "memberLevel" to (milestone.memberLevelName ?: "")
-                            ))
+                            )
                         }
                     }
                     "textMessageEvent" -> {
-                        // Normal Chat
-                        triggerEvent(EventType.CHAT, mapOf(
+                        val text = msg.snippet.displayMessage ?: msg.snippet.textMessageDetails?.messageText ?: ""
+                        eventType = EventType.CHAT
+                        params = mapOf(
                             "author" to author,
                             "message" to text
-                        ))
+                        )
                     }
+                }
+                
+                if (eventType != null) {
+                    // Display in Chat
+                    if (showChatInGame) {
+                        val formatted = formatMessage(eventType, params)
+                        if (formatted.isNotBlank()) {
+                            client.gui.chat.addMessage(Component.literal(formatted))
+                        }
+                    }
+                    
+                    // Trigger Event
+                    triggerEvent(eventType, params)
                 }
             }
         }
+    }
+    
+    private fun formatMessage(eventType: EventType, params: Map<String, Any>): String {
+        var format = formats[eventType.name] ?: return ""
+        for ((key, value) in params) {
+            format = format.replace("%$key%", value.toString())
+        }
+        return format
     }
     
     // Helper to trigger data pack function with macro arguments
@@ -322,26 +367,5 @@ object StreamMCClient : ClientModInitializer {
         poller = null
         displayQueue.clear()
         Minecraft.getInstance().gui.chat.addMessage(Component.literal("§cStopped polling YouTube Chat."))
-    }
-    
-    private fun loadConfig() {
-        val config = ConfigManager.loadConfig()
-        videoId = config.videoId
-        pollingIntervalMs = config.pollingIntervalMs
-        chatFormat = config.chatFormat
-        showChatInGame = config.showChatInGame
-        eventMap.clear()
-        eventMap.putAll(ConfigManager.stringMapToEventMap(config.eventMappings))
-    }
-    
-    fun saveConfig() {
-        val config = StreamMCConfig(
-            videoId = videoId,
-            pollingIntervalMs = pollingIntervalMs,
-            chatFormat = chatFormat,
-            showChatInGame = showChatInGame,
-            eventMappings = ConfigManager.eventMapToStringMap(eventMap)
-        )
-        ConfigManager.saveConfig(config)
     }
 }

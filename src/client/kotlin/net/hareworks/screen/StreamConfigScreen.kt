@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component
 class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
     private lateinit var apiKeyField: EditBox
     private lateinit var videoIdField: EditBox
-    private lateinit var chatFormatField: EditBox
     private lateinit var chatDisplayCheckbox: Checkbox
 
     override fun init() {
@@ -33,53 +32,34 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         videoIdField.setHint(Component.literal("Enter Video ID"))
         addRenderableWidget(videoIdField)
 
-        // Chat Format Field
-        chatFormatField = EditBox(font, centerX - 100, 130, 200, 20, Component.literal("Chat Format"))
-        chatFormatField.setMaxLength(200)
-        chatFormatField.value = StreamMCClient.chatFormat
-        chatFormatField.setHint(Component.literal("Format: %author% %message%"))
-        addRenderableWidget(chatFormatField)
-
         // Chat Display Checkbox
         chatDisplayCheckbox = Checkbox.builder(Component.literal("Display chat in-game"), font)
-            .pos(centerX - 100, 160)
+            .pos(centerX - 100, 130)
             .selected(StreamMCClient.showChatInGame)
             .build()
         addRenderableWidget(chatDisplayCheckbox)
 
-        // Start Button
-        addRenderableWidget(Button.builder(Component.literal("Start Polling")) {
-            startPolling()
-        }.bounds(centerX - 105, 190, 100, 20).build())
-
-        // Stop Button
-        addRenderableWidget(Button.builder(Component.literal("Stop Polling")) {
-            stopPolling()
-        }.bounds(centerX + 5, 190, 100, 20).build())
+        // Apply Button
+        addRenderableWidget(Button.builder(Component.literal("Apply")) {
+            saveSettings()
+        }.bounds(centerX - 50, 160, 100, 20).build())
     }
 
-    private fun startPolling() {
+    private fun saveSettings() {
         val apiKey = apiKeyField.value
         val videoId = videoIdField.value
-        val chatFormat = chatFormatField.value
+        
+        if (apiKey.isNotBlank()) {
+            StreamMCClient.apiKey = apiKey
+        }
+        
+        if (videoId.isNotBlank()) {
+            StreamMCClient.videoId = videoId
+        }
 
-        if (apiKey.isBlank() || videoId.isBlank()) {
-            return
-        }
-        
-        if (chatFormat.isNotBlank()) {
-            StreamMCClient.chatFormat = chatFormat
-        }
-        
         StreamMCClient.showChatInGame = chatDisplayCheckbox.selected()
+        StreamMCClient.saveConfig()
 
-        StreamMCClient.startPolling(apiKey, videoId)
-        
-        onClose()
-    }
-
-    private fun stopPolling() {
-        StreamMCClient.stopPolling()
         onClose()
     }
 
@@ -92,6 +72,5 @@ class StreamConfigScreen : Screen(Component.literal("StreamMC Config")) {
         // Labels
         guiGraphics.drawString(font, Component.literal("API Key"), width / 2 - 100, 40, 0xA0A0A0)
         guiGraphics.drawString(font, Component.literal("Video ID"), width / 2 - 100, 80, 0xA0A0A0)
-        guiGraphics.drawString(font, Component.literal("Chat Format"), width / 2 - 100, 120, 0xA0A0A0)
     }
 }
