@@ -43,7 +43,7 @@ object StreamMCClient : ClientModInitializer {
     
     // ... (rest of the file) ...
 
-    private fun loadConfig() {
+    fun reloadConfig() {
         val config = ConfigManager.loadConfig()
         videoId = config.videoId
         pollingIntervalMs = config.pollingIntervalMs
@@ -68,7 +68,7 @@ object StreamMCClient : ClientModInitializer {
 
     override fun onInitializeClient() {
         // Load config
-        loadConfig()
+        reloadConfig()
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, registryAccess ->
             val root = ClientCommandManager.literal("streammc")
 
@@ -99,6 +99,13 @@ object StreamMCClient : ClientModInitializer {
             // /streammc stop -> Stop polling
             root.then(ClientCommandManager.literal("stop").executes { context ->
                 stopPolling()
+                1
+            })
+            
+            // /streammc reload -> Reload config
+            root.then(ClientCommandManager.literal("reload").executes { context ->
+                reloadConfig()
+                context.source.sendFeedback(Component.literal("§a[StreamMC] Configuration reloaded from disk."))
                 1
             })
 
@@ -194,6 +201,10 @@ object StreamMCClient : ClientModInitializer {
 
             root.then(eventNode)
             dispatcher.register(root)
+        }
+
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.ALLOW_GAME.register { message, _ ->
+            !message.string.startsWith("Running function")
         }
 
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register { client ->
