@@ -49,8 +49,11 @@ class ChatPoller(private val apiKey: String, private val videoId: String, privat
                     if (response != null) {
                         // Update paging and interval
                         nextPageToken = response.nextPageToken
-                        pollingInterval = response.pollingIntervalMillis ?: pollingInterval
+                        val apiInterval = response.pollingIntervalMillis ?: defaultPollingInterval
+                        pollingInterval = maxOf(apiInterval, defaultPollingInterval)
                         
+                        logger.info("Next request in ${pollingInterval}ms")
+
                         // Process messages
                          if (response.items.isNotEmpty()) {
                              logger.info("Fetched ${response.items.size} messages")
@@ -59,8 +62,13 @@ class ChatPoller(private val apiKey: String, private val videoId: String, privat
 
                     } else {
                         logger.warn("Failed to fetch messages. Retrying in default interval.")
+                        pollingInterval = defaultPollingInterval
                     }
 
+                    if (pollingInterval < 1000) {
+                         logger.warn("Polling interval too small ($pollingInterval), enforcing 1000ms minimum.")
+                         pollingInterval = 1000
+                    }
                     delay(pollingInterval)
 
                 } catch (e: Exception) {

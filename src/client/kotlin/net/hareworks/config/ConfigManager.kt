@@ -18,7 +18,9 @@ data class StreamMCConfig(
         "SUPERCHAT" to "§c[SC] §6%author% §a(%displayAmount%): §f%message%",
         "SUPERSTICKER" to "§d[Sticker] §6%author% §a(%displayAmount%)",
         "NEW_SPONSOR" to "§a[New Member] §e%author% §b(%memberLevel%)",
-        "MEMBER_MILESTONE" to "§b[Milestone] §e%author% §d(%memberMonth% mo): §f%message%"
+        "MEMBER_MILESTONE" to "§b[Milestone] §e%author% §d(%memberMonth% mo): §f%message%",
+        "MEMBERSHIP_GIFTING" to "§d[Gift] §e%author% §fgifted §a%count% §fmemberships!",
+        "GIFT_MEMBERSHIP_RECEIVED" to "§d[Gift Rec.] §e%author% §fwas gifted by §e%gifter%!"
     ),
     val eventMappings: Map<String, String> = emptyMap()
 )
