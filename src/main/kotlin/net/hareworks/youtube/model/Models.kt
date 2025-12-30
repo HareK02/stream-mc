@@ -40,7 +40,9 @@ data class Snippet(
     val superChatDetails: SuperChatDetails? = null,
     val superStickerDetails: SuperStickerDetails? = null,
     val newSponsorDetails: NewSponsorDetails? = null,
-    val memberMilestoneChatDetails: MemberMilestoneChatDetails? = null
+    val memberMilestoneChatDetails: MemberMilestoneChatDetails? = null,
+    val membershipGiftingDetails: MembershipGiftingDetails? = null,
+    val giftMembershipReceivedDetails: GiftMembershipReceivedDetails? = null
 )
 
 @Serializable
@@ -92,4 +94,17 @@ data class AuthorDetails(
     val isChatOwner: Boolean = false,
     val isChatSponsor: Boolean = false,
     val isChatModerator: Boolean = false
+)
+
+@Serializable
+data class MembershipGiftingDetails(
+    val giftMembershipsCount: Int,
+    val memberLevelName: String? = null
+)
+
+@Serializable
+data class GiftMembershipReceivedDetails(
+    val memberLevelName: String? = null,
+    val gifterChannelId: String? = null,
+    val gifterMemberLevelName: String? = null
 )

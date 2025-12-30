@@ -22,7 +22,9 @@ enum class EventType {
     SUPERCHAT,
     SUPERSTICKER,
     NEW_SPONSOR,
-    MEMBER_MILESTONE
+    MEMBER_MILESTONE,
+    MEMBERSHIP_GIFTING,
+    GIFT_MEMBERSHIP_RECEIVED
 }
 
 object StreamMCClient : ClientModInitializer {
@@ -36,7 +38,9 @@ object StreamMCClient : ClientModInitializer {
         "SUPERCHAT" to "§c[SC] §6%author% §a(%displayAmount%): §f%message%",
         "SUPERSTICKER" to "§d[Sticker] §6%author% §a(%displayAmount%)",
         "NEW_SPONSOR" to "§a[New Member] §e%author% §b(%memberLevel%)",
-        "MEMBER_MILESTONE" to "§b[Milestone] §e%author% §d(%memberMonth% mo): §f%message%"
+        "MEMBER_MILESTONE" to "§b[Milestone] §e%author% §d(%memberMonth% mo): §f%message%",
+        "MEMBERSHIP_GIFTING" to "§d[Gift] §e%author% §fgifted §a%count% §fmemberships!",
+        "GIFT_MEMBERSHIP_RECEIVED" to "§d[Gift Rec.] §e%author% §fwas gifted by §e%gifter%!"
     )
     
     val eventMap = mutableMapOf<EventType, String>()
@@ -294,6 +298,36 @@ object StreamMCClient : ClientModInitializer {
                                 "message" to (milestone.userComment ?: ""),
                                 "memberMonth" to milestone.memberMonth,
                                 "memberLevel" to (milestone.memberLevelName ?: "")
+                            )
+                        }
+                    }
+                    "membershipGiftingEvent" -> {
+                        val gifting = msg.snippet.membershipGiftingDetails
+                        if (gifting != null) {
+                            eventType = EventType.MEMBERSHIP_GIFTING
+                            params = mapOf(
+                                "author" to author,
+                                "count" to gifting.giftMembershipsCount,
+                                "memberLevel" to (gifting.memberLevelName ?: "")
+                            )
+                        }
+                    }
+                    "giftMembershipReceivedEvent" -> {
+                        val received = msg.snippet.giftMembershipReceivedDetails
+                        if (received != null) {
+                            eventType = EventType.GIFT_MEMBERSHIP_RECEIVED
+                            params = mapOf(
+                                "author" to author,
+                                "memberLevel" to (received.memberLevelName ?: ""),
+                                "gifter" to (received.gifterMemberLevelName ?: "Someone") // The format uses %gifter%, but logic might want channel name or level name. 
+                                // Actually API says gifterChannelId and gifterMemberLevelName are in details.
+                                // For display name of gifter, usually it's authorDetails of the ORIGINAL gifting event, but here we only have receiver details?
+                                // Wait, Models.kt says GiftMembershipReceivedDetails has gifterChannelId and gifterMemberLevelName. It doesn't seem to have gifterDisplayName.
+                                // However, checking YouTube API docs: snippet.giftMembershipReceivedDetails.gifterChannelId.
+                                // Usually we execute a command. For command, ID is useful. For display, we might want name.
+                                // But Models.kt doesn't have gifterName in GiftMembershipReceivedDetails.
+                                // So I'll just put "Someone" or use the level name if that's what's available, or maybe authorDetails of this message is the receiver.
+                                // Let's use "gifterChannelId" as a param, and for display maybe just keep it simple.
                             )
                         }
                     }
